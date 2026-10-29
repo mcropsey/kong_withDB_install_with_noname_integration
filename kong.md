@@ -272,29 +272,6 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: nope.example.com' http://loca
 curl -sI -H 'Host: crapi.cropseyit.com' http://localhost:80/ | grep -i 'x-ratelimit'
 ```
 
-## Step 10 — Save a declarative backup (recommended)
-
-Export the DB state to `/opt/kong/kong.yml` — a reviewable backup and re-import template
-(the reference server keeps one at this path):
-
-```bash
-sudo mkdir -p /opt/kong
-sudo podman run --rm --network kongnet -u root \
-  -e KONG_DATABASE=postgres -e KONG_PG_HOST=kong-db \
-  -e KONG_PG_USER=kong \
-  -e KONG_PG_PASSWORD="$(sudo podman inspect kong --format '{{.Config.Env}}' | tr ',' '\n' | grep KONG_PG_PASSWORD | tr -d ' \"' | cut -d= -f2)" \
-  -e KONG_PG_DATABASE=kong \
-  -v /opt/kong:/out:rw \
-  docker.io/library/kong:3.6 sh -c 'kong config db_export /out/kong.yml'
-sudo chmod 600 /opt/kong/kong.yml
-```
-
-> **`-u root` is required:** the kong image runs as uid 1000 (`kong`), which cannot
-> write into the root-owned `/opt/kong`. Without it, `db_export` exits 0 *silently*
-> and no file is written.
->
-> The source of truth stays Postgres; this file is only the backup/import template.
-
 ---
 
 # Admin API ("the admin page")
@@ -391,22 +368,6 @@ curl -s -X POST http://localhost:8001/plugins \
   -d '{"name":"rate-limiting","config":{"minute":100,"hour":10000,"policy":"local","limit_by":"ip"}}'
 ```
 
-## Bulk / declarative export (backup)
-
-```bash
-# export current DB state to a declarative file (backup / for diffing)
-# NOTE: -u root is required — the kong user (uid 1000) can't write /opt/kong,
-# and without it db_export exits 0 silently without writing the file.
-sudo podman run --rm --network kongnet -u root \
-  -e KONG_DATABASE=postgres -e KONG_PG_HOST=kong-db \
-  -e KONG_PG_USER=kong \
-  -e KONG_PG_PASSWORD="$(sudo podman inspect kong --format '{{.Config.Env}}' | tr ',' '\n' | grep KONG_PG_PASSWORD | tr -d ' \"' | cut -d= -f2)" \
-  -e KONG_PG_DATABASE=kong \
-  -v /opt/kong:/out:rw \
-  docker.io/library/kong:3.6 sh -c 'kong config db_export /out/kong.yml'
-sudo chmod 600 /opt/kong/kong.yml
-```
-
 ## Upgrading / migrations
 
 ```bash
@@ -443,5 +404,5 @@ sudo podman inspect kong --format '{{json .Config.Env}}'
 sudo podman rm -f kong kong-db
 sudo podman volume rm kong-db-data
 sudo podman network rm kongnet
-# then repeat Steps 1–10
+# then repeat Steps 1–9
 ```

@@ -60,7 +60,7 @@ ssh mcropsey@192.168.1.104
 sudo podman ps --format '{{.Names}}  {{.Status}}'        # expect: kong  Up, kong-db  Up
 sudo podman inspect kong --format '{{json .Config.Env}}' | tr ',' '\n' | grep KONG_DATABASE   # KONG_DATABASE=postgres
 curl -s http://localhost:8001/status | python3 -c 'import json,sys; print("db:", json.load(sys.stdin)["database"]["reachable"])'   # True
-sudo ls /opt/kong/                                          # kong.yml, kong-db-password  (no plugins/ yet)
+sudo ls /opt/kong/plugins 2>/dev/null                      # expect: nothing yet (no plugins/ dir)
 ```
 
 The plugin files on the Mac:
